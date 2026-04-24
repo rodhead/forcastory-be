@@ -1,0 +1,75 @@
+/* src/styles/tokens.css */
+@import "tailwindcss";
+
+@layer base {
+    :root {
+        /* brand colours */
+        --color-primary:        210 100% 40%;   /* hsl values — tailwind reads these */
+        --color-primary-hover:  210 100% 35%;
+        --color-secondary:      260 60% 55%;
+        --color-accent:         170 70% 40%;
+
+        /* neutral surface */
+        --color-background:     0 0% 100%;
+        --color-surface:        220 14% 97%;
+        --color-surface-raised: 0 0% 100%;
+        --color-border:         220 13% 91%;
+        --color-border-strong:  220 13% 80%;
+
+        /* text */
+        --color-text-primary:   222 47% 11%;
+        --color-text-secondary: 215 16% 47%;
+        --color-text-muted:     215 16% 65%;
+        --color-text-inverse:   0 0% 100%;
+
+        /* semantic */
+        --color-success:        142 72% 29%;
+        --color-warning:        38 92% 50%;
+        --color-danger:         0 84% 60%;
+        --color-info:           210 100% 40%;
+
+        /* spacing scale */
+        --spacing-xs:  4px;
+        --spacing-sm:  8px;
+        --spacing-md:  12px;
+        --spacing-lg:  16px;
+        --spacing-xl:  24px;
+        --spacing-2xl: 32px;
+        --spacing-3xl: 48px;
+
+        /* radii */
+        --radius-sm:  6px;
+        --radius-md:  8px;
+        --radius-lg:  12px;
+        --radius-xl:  16px;
+        --radius-full: 9999px;
+
+        /* typography */
+        --font-sans:  'Inter', system-ui, sans-serif;
+        --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+        --font-size-xs:   12px;
+        --font-size-sm:   13px;
+        --font-size-base: 14px;
+        --font-size-md:   15px;
+        --font-size-lg:   18px;
+        --font-size-xl:   22px;
+        --font-size-2xl:  28px;
+
+        /* shadows */
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
+    }
+
+    /* dark mode — just override the tokens, every component updates automatically */
+    .dark {
+        --color-background:     222 47% 8%;
+        --color-surface:        222 47% 11%;
+        --color-surface-raised: 222 47% 14%;
+        --color-border:         222 47% 18%;
+        --color-border-strong:  222 47% 25%;
+        --color-text-primary:   210 40% 96%;
+        --color-text-secondary: 215 20% 65%;
+        --color-text-muted:     215 16% 45%;
+    }
+}
