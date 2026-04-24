@@ -13,7 +13,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 
 	<properties>
-		<java.version>25</java.version>
+		<java.version>22</java.version>
 		<commons-lang3.version>3.19.0</commons-lang3.version>
 		<lombok.version>1.18.42</lombok.version>
 	</properties>
