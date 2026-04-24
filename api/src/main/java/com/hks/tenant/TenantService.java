@@ -19,15 +19,18 @@ public class TenantService {
     private final TenantRepository tenantRepository;
 
     public void createTenant(String tenantId) {
+        log.info("Creating tenant: {}", tenantId);
         if (tenantRepository.existsByTenantId(tenantId)) {
+            log.warn("Tenant already exists: {}", tenantId);
             throw new RecordAlreadyExistsException("Tenant already exists: " + tenantId);
         }
         tenantDataSourceProvider.createNewSchema(tenantId);
         tenantRepository.save(Tenant.builder().tenantId(tenantId).build());
-        log.info("Tenant '{}' registered", tenantId);
+        log.info("Tenant '{}' created successfully", tenantId);
     }
 
     public Page<Tenant> getAllTenants(Pageable pageable) {
+        log.debug("Fetching all tenants: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
         return tenantRepository.findAll(pageable);
     }
 }

@@ -21,7 +21,7 @@ public class TenantInterceptor implements HandlerInterceptor {
     private boolean devModeEnabled;
 
     private static final List<String> EXCLUDED_PATHS =
-            List.of("/v1/tenants", "/v1/health", "/health", "/swagger-ui", "/api-docs");
+            List.of("/v1/tenants", "/v1/health", "/health", "/swagger-ui", "/api-docs", "/v3/api-docs");
 
     public static final List<String> DOMAIN_SUFFIXES =
             List.of(".coupadev.com", ".coupahost.com", ".coupacloud.com", ".coupadev.net");
