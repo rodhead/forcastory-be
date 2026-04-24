@@ -1,7 +1,5 @@
 package com.hks.config.tenant;
 
-import com.coupa.logging.annotations.LogContext;
-import com.coupa.util.ElasticsearchIndexUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.util.Map;
@@ -10,95 +8,72 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.flywaydb.core.Flyway;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 @Slf4j
-@Configuration
+@Component
 public class TenantDataSourceProvider {
 
+    public static final String SCHEMA_PREFIX = "forcastory_service_";
+    private static final String MASTER_KEY = "master";
+
     private final Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>();
-    private final HikariConfig hikariConfig;
-    private final ECClient ecClient;
 
-    @Value("${spring.elasticsearch.enabled:false}")
-    private boolean elasticsearchEnabled;
+    @Value("${spring.datasource.url}")
+    private String jdbcUrl;
 
-    private static final String DEFAULT_TENANT_ID = "default";
+    @Value("${spring.datasource.username}")
+    private String username;
 
-    @Autowired
-    public TenantDataSourceProvider(HikariConfig hikariConfig, ECClient ecClient) {
+    @Value("${spring.datasource.password}")
+    private String password;
 
-        this.hikariConfig = hikariConfig;
-        this.ecClient = ecClient;
-    }
-
+    /**
+     * Returns the datasource for the given tenant, or the master datasource if tenantId is blank.
+     * Datasources are created lazily and cached for the lifetime of the application.
+     */
     public DataSource getDataSource(String tenantId) {
         if (StringUtils.isBlank(tenantId)) {
-            return dataSourceMap.computeIfAbsent(DEFAULT_TENANT_ID, id -> createDefaultDataSource());
+            return dataSourceMap.computeIfAbsent(MASTER_KEY, id -> buildDataSource(jdbcUrl, MASTER_KEY));
         }
-        return dataSourceMap.computeIfAbsent(tenantId, id -> createDataSource(tenantId));
+        String schemaName = SCHEMA_PREFIX + tenantId;
+        // Append currentSchema so every connection in the pool targets the tenant schema by default.
+        return dataSourceMap.computeIfAbsent(
+                tenantId, id -> buildDataSource(jdbcUrl + "?currentSchema=" + schemaName, tenantId));
     }
 
-    private DataSource createDefaultDataSource() {
-
-        log.info("Creating default data source");
-        HikariConfig config = new HikariConfig();
-        hikariConfig.copyStateTo(config);
-        return new HikariDataSource(config);
-    }
-
-    public DataSource createDataSource(String tenantId) {
-        try {
-            log.info("Creating data source for tenant: {}", tenantId);
-            HikariConfig config = new HikariConfig();
-            hikariConfig.copyStateTo(config);
-            config.setJdbcUrl(
-                    hikariConfig
-                            .getJdbcUrl()
-                            .replace(DEFAULT_TENANT_ID, tenantId)
-                            .replace("?createDatabaseIfNotExist=true", ""));
-            HikariDataSource dataSource = new HikariDataSource(config);
-
-            Flyway.configure()
-                    .dataSource(dataSource)
-                    .locations("classpath:db/migration/shared")
-                    .load()
-                    .migrate();
-
-            return dataSource;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create data source for tenant: " + tenantId, e);
-        }
-    }
-
+    /**
+     * Creates the schema for a new tenant and runs Flyway tenant migrations against it.
+     * Flyway creates the schema if it does not yet exist.
+     */
     public void createNewSchema(String tenantId) {
+        if (!tenantId.matches("^[a-zA-Z0-9_]+$")) {
+            throw new IllegalArgumentException("Tenant ID contains invalid characters: " + tenantId);
+        }
+        String schemaName = SCHEMA_PREFIX + tenantId;
+        log.info("Provisioning schema '{}' for tenant '{}'", schemaName, tenantId);
 
-        log.info("Creating new database for tenant: {}", tenantId);
-        HikariConfig config = new HikariConfig();
-        hikariConfig.copyStateTo(config);
-        config.setJdbcUrl(hikariConfig.getJdbcUrl().replace(DEFAULT_TENANT_ID, tenantId));
-
-        HikariDataSource dataSource = new HikariDataSource(config);
         Flyway.configure()
-                .dataSource(dataSource)
-                .locations("classpath:db/migration/shared")
+                .dataSource(getDataSource(null))
+                .schemas(schemaName)
+                .locations("classpath:db/migration/tenant")
                 .load()
                 .migrate();
-        dataSource.close();
-        try {
-            createIndexForTenant(tenantId);
-        } catch (Exception e) {
-            log.error("Failed to create elasticsearch index for tenant: {} ", tenantId, e);
-        }
+
+        log.info("Schema '{}' provisioned successfully", schemaName);
     }
 
-    public void createIndexForTenant(String tenantId) {
-        if (elasticsearchEnabled) {
-            ElasticsearchIndexUtil.createIndicesForTenant(ecClient.getElasticsearchClient(), tenantId);
-        } else {
-            log.info("Elasticsearch index creation skipped as spring.elasticsearch.enabled is false");
-        }
+    private DataSource buildDataSource(String url, String poolName) {
+        log.info("Creating HikariCP pool '{}'", poolName);
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setDriverClassName("org.postgresql.Driver");
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setPoolName("HikariPool-" + poolName);
+        return new HikariDataSource(config);
     }
 }

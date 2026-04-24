@@ -1,11 +1,8 @@
 package com.hks.repository.tenant;
 
-import com.hks.entity.Tenant;
+import com.hks.entity.TestRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface TenantRepository extends JpaRepository<Tenant, Long> {
-
-    boolean existsByTenantId(String tenantId);
-}
+public interface TestRecordRepository extends JpaRepository<TestRecord, Long> {}
