@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '../store/auth.store'
 import type { LoginCredentials } from '../types/auth.types'
-import {Input} from "../../../components/ui/Input.tsx";
-import {Button} from "../../../components/ui/Button.tsx";
+import {Input} from "../../../components/ui/Input";
+import {Button} from "../../../components/ui/Button";
 
 export function LoginForm() {
     const navigate = useNavigate()
@@ -35,7 +35,10 @@ export function LoginForm() {
             setUser({
                 id: '1',
                 email: credentials.email,
-                name: 'Misbah Rahman',
+                name: 'Admin',
+                role: 'admin',
+                organisation: 'HKS Inc.',
+                initials: 'G',
             })
 
             navigate({ to: '/dashboard' })

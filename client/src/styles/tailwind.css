@@ -1,50 +1,56 @@
-/* src/styles/tailwind.css */
+/* src/styles/tailwind.css
+   @import url() MUST come before @import "./tokens.css"
+   because tokens.css itself contains @import "tailwindcss" */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "./tokens.css";
 
+/* ── Tailwind theme bridge ─────────────────────────────────────────────── */
 @theme {
-    /* now you can use bg-primary, text-secondary, border-border in classNames */
-    --color-primary:          hsl(var(--color-primary));
-    --color-primary-hover:    hsl(var(--color-primary-hover));
-    --color-secondary:        hsl(var(--color-secondary));
-    --color-background:       hsl(var(--color-background));
-    --color-surface:          hsl(var(--color-surface));
-    --color-surface-raised:   hsl(var(--color-surface-raised));
-    --color-border:           hsl(var(--color-border));
-    --color-text-primary:     hsl(var(--color-text-primary));
-    --color-text-secondary:   hsl(var(--color-text-secondary));
-    --color-text-muted:       hsl(var(--color-text-muted));
-    --color-success:          hsl(var(--color-success));
-    --color-warning:          hsl(var(--color-warning));
-    --color-danger:           hsl(var(--color-danger));
+  --color-primary:        var(--a1);
+  --color-primary-hover:  var(--a2);
+  --color-background:     var(--s0);
+  --color-surface:        var(--s2);
+  --color-surface-raised: var(--s1);
+  --color-border:         var(--s4);
+  --color-border-strong:  var(--s5);
+  --color-text-primary:   var(--t1);
+  --color-text-secondary: var(--t2);
+  --color-text-muted:     var(--t3);
+  --color-danger:         var(--er);
+  --color-warning:        var(--wa);
+  --color-info:           var(--in);
 
-    --font-family-sans:       var(--font-sans);
-    --font-family-mono:       var(--font-mono);
-
-    --radius-sm:  var(--radius-sm);
-    --radius-md:  var(--radius-md);
-    --radius-lg:  var(--radius-lg);
+  --font-family-sans: var(--font-sans);
+  --font-family-mono: var(--font-mono);
 }
 
-@theme {
-    --animate-fadein: fadein .5s ease both;
-    --animate-float1: float1 9s ease-in-out infinite;
-    --animate-float2: float2 12s ease-in-out infinite;
-    --animate-float3: float3 7s ease-in-out infinite;
-}
-
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
 @keyframes fadein {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes float1 {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50%      { transform: translateY(-18px) translateX(8px); }
+  0%,100% { transform: translateY(0) translateX(0); }
+  50%     { transform: translateY(-18px) translateX(8px); }
 }
 @keyframes float2 {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50%      { transform: translateY(14px) translateX(-10px); }
+  0%,100% { transform: translateY(0) translateX(0); }
+  50%     { transform: translateY(14px) translateX(-10px); }
 }
 @keyframes float3 {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50%      { transform: translateY(-10px) translateX(-6px); }
+  0%,100% { transform: translateY(0) translateX(0); }
+  50%     { transform: translateY(-10px) translateX(-6px); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(22px) scale(.95); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+@keyframes chatPop {
+  from { opacity: 0; transform: scale(.92) translateY(16px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
 }

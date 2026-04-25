@@ -10,3 +10,4 @@ ai/.venv/
 ai/venv/
 ai/db.sqlite3
 ai/.env
+.vite/

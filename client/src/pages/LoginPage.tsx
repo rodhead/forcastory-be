@@ -1,262 +1,418 @@
-import { useState } from 'react'
+// src/pages/LoginPage.tsx
+import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Eye, EyeOff } from 'lucide-react'
-import {useAuthStore} from "../features/auth/store/auth.store.ts";
-import {cn} from "../utils/cn.ts";
+import { Eye, EyeOff, BarChart2, ArrowRight, Check, Shield, BarChart, Eye as EyeIcon, Briefcase, TrendingUp, Zap, Globe, Lock } from 'lucide-react'
+import { useAuth0 } from '@auth0/auth0-react'
+import { useAuthStore } from '@/features/auth/store/auth.store'
+import { cn } from '@/utils/cn'
+import type { Role } from '@/types/common'
 
-// reusable field wrapper
-function Field({ label, action, children }: {
-    label: string
-    action?: React.ReactNode
-    children: React.ReactNode
-}) {
-    return (
-        <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-[#555] tracking-wide">{label}</label>
-                {action}
-            </div>
-            {children}
+// ─── Tenant company from URL subdomain ────────────────────────────────────────
+// HKS Inc. is the platform owner. Tenants access via companyabc.hksforecastory.com.
+// On localhost / bare domain there is no tenant — show generic workspace label.
+function getTenantFromUrl(): { name: string; slug: string } | null {
+  const host = typeof window !== 'undefined' ? window.location.hostname : ''
+  const parts = host.split('.')
+  if (parts.length >= 3 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+    const slug = parts[0]
+    const name = slug.charAt(0).toUpperCase() + slug.slice(1)
+    return { name, slug }
+  }
+  return null  // localhost / no subdomain — demo / HKS internal
+}
+
+// ─── Role definitions ─────────────────────────────────────────────────────────
+const ROLES: { id: Role; label: string; desc: string; icon: React.ElementType; badge: string; color: string }[] = [
+  { id: 'admin',   label: 'Administrator', desc: 'Full access to all features, settings and user management',       icon: Shield,   badge: 'Full access',     color: '#ca8a04' },
+  { id: 'analyst', label: 'Analyst',       desc: 'Run experiments, view results and manage forecasting projects',   icon: BarChart,  badge: 'Read / Write',    color: '#3b82f6' },
+  { id: 'manager', label: 'Manager',       desc: 'Approve outputs and export reports for leadership review',        icon: Briefcase, badge: 'Approve / Export', color: '#8b5cf6' },
+  { id: 'viewer',  label: 'Viewer',        desc: 'Read-only access to projects, forecasts and dashboards',          icon: EyeIcon,   badge: 'Read only',       color: '#10b981' },
+]
+
+// ─── Left panel ───────────────────────────────────────────────────────────────
+function LeftPanel({ tenant }: { tenant: { name: string; slug: string } | null }) {
+  const features = [
+    { icon: TrendingUp, label: 'Demand Forecasting',     desc: 'ML-powered predictions across 20+ algorithms'  },
+    { icon: Zap,        label: 'Real-time Experiments',  desc: 'Run, compare and deploy models in minutes'     },
+    { icon: Globe,      label: 'Multi-tenant Platform',  desc: 'Isolated workspace per business unit'          },
+    { icon: Lock,       label: 'Enterprise Security',    desc: 'SOC2 compliant · Role-based access control'    },
+  ]
+
+  return (
+    <div className="relative flex flex-col justify-between p-10 overflow-hidden" style={{ background: '#06091a' }}>
+      {/* grid overlay */}
+      <svg className="absolute inset-0 w-full h-full opacity-[0.05]" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M40 0H0V40" fill="none" stroke="white" strokeWidth="0.5" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
+
+      {/* ambient orbs */}
+      <div className="absolute w-[400px] h-[400px] rounded-full -top-24 -left-24 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(202,138,4,.10) 0%, transparent 65%)' }} />
+      <div className="absolute w-[300px] h-[300px] rounded-full bottom-10 right-0 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(59,130,246,.07) 0%, transparent 65%)' }} />
+
+      {/* chart visual */}
+      <div className="absolute bottom-[180px] left-0 right-0 flex items-end justify-center gap-[6px] px-12 opacity-[0.07]">
+        {[38, 62, 45, 78, 55, 90, 67, 83, 50, 72, 88, 60, 94].map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-t-sm"
+            style={{
+              height: `${h * 1.3}px`,
+              background: 'linear-gradient(180deg, #ca8a04 0%, #a16207 100%)',
+              animation: `barPulse 2.4s ease-in-out ${i * 0.12}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* brand */}
+      <div className="relative z-10 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', boxShadow: '0 0 24px rgba(202,138,4,.3)' }}>
+          <BarChart2 size={18} className="text-black" />
         </div>
-    )
-}
-
-// shared input class
-const inputCls = [
-    'w-full h-[42px] px-3.5 rounded-[10px]',
-    'border border-[#e4e4e4] bg-white text-[#1a1a1a]',
-    'text-[14px] placeholder:text-[#bbb] outline-none',
-    'transition focus:border-[#7F77DD] focus:ring-2 focus:ring-[#7F77DD]/10',
-].join(' ')
-
-function Divider() {
-    return (
-        <div className="flex items-center gap-2.5 my-4">
-            <div className="flex-1 h-px bg-[#ececec]" />
-            <span className="text-[12px] text-[#bbb]">or continue with</span>
-            <div className="flex-1 h-px bg-[#ececec]" />
+        <div>
+          <div className="text-[15px] font-bold text-white tracking-tight">Forecastory</div>
+          <div className="text-[11px]" style={{ color: 'rgba(255,255,255,.3)' }}>by HKS Inc.</div>
         </div>
-    )
-}
+      </div>
 
-function GoogleButton() {
-    return (
-        <button className="w-full h-[42px] flex items-center justify-center gap-2 rounded-[10px] border border-[#e4e4e4] bg-white text-[13px] text-[#333] hover:bg-[#fafafa] transition">
-            <GoogleIcon />
-            Continue with Google
-        </button>
-    )
-}
-
-function GoogleIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 16 16">
-            <path d="M15.68 8.18c0-.57-.05-1.11-.14-1.64H8v3.1h4.31a3.68 3.68 0 01-1.6 2.42v2h2.59c1.52-1.4 2.39-3.46 2.39-5.88z" fill="#4285F4"/>
-            <path d="M8 16c2.16 0 3.97-.72 5.3-1.94l-2.59-2a4.77 4.77 0 01-7.1-2.5H1v2.07A8 8 0 008 16z" fill="#34A853"/>
-            <path d="M3.61 9.57A4.8 4.8 0 013.36 8c0-.55.1-1.08.25-1.57V4.36H1A8 8 0 000 8c0 1.29.31 2.51.86 3.59l2.75-2.02z" fill="#FBBC05"/>
-            <path d="M8 3.18c1.22 0 2.31.42 3.17 1.24l2.37-2.37A7.94 7.94 0 008 0a8 8 0 00-7.14 4.36l2.75 2.07A4.77 4.77 0 018 3.18z" fill="#EA4335"/>
-        </svg>
-    )
-}
-
-function Spinner() {
-    return (
-        <div className="w-4 h-4 border-2 border-white/25 border-t-white rounded-full animate-spin" />
-    )
-}
-
-function GridLines() {
-    return (
-        <svg
-            className="absolute inset-0 w-full h-full opacity-[0.07]"
-            preserveAspectRatio="xMidYMid slice"
-        >
-            <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M40 0H0V40" fill="none" stroke="white" strokeWidth="0.5" />
-                </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-    )
-}
-
-function BrandLogo() {
-    return (
-        <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 bg-[#534AB7] rounded-[10px] flex items-center justify-center flex-shrink-0">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <rect x="2"  y="12" width="3.5" height="6"  rx="1" fill="white" />
-                    <rect x="8"  y="7"  width="3.5" height="11" rx="1" fill="white" />
-                    <rect x="14" y="2"  width="3.5" height="16" rx="1" fill="white" opacity=".65" />
-                </svg>
-            </div>
-            <div>
-                <div className="text-[15px] font-medium text-[#f0eefc] tracking-[-0.01em]">
-                    HKS Analytics
-                </div>
-                <div className="text-[11px] text-[#f0eefc]/40 mt-px">
-                    Resource forecasting platform
-                </div>
-            </div>
+      {/* headline */}
+      <div className="relative z-10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5 text-[10.5px] font-semibold tracking-wide" style={{ background: 'rgba(202,138,4,.12)', border: '1px solid rgba(202,138,4,.2)', color: '#ca8a04' }}>
+          <div className="w-1.5 h-1.5 rounded-full bg-[#ca8a04] animate-pulse" />
+          Platform v2.1 · Now with multi-model ensembles
         </div>
-    )
-}
+        <h2 className="text-[28px] font-bold text-white leading-[1.2] tracking-tight mb-3">
+          Forecast smarter,<br />
+          <span style={{ color: '#ca8a04' }}>scale faster.</span>
+        </h2>
+        <p className="text-[12.5px] leading-relaxed mb-8" style={{ color: 'rgba(255,255,255,.35)', maxWidth: '280px' }}>
+          Demand planning and supply chain intelligence for high-growth teams — deployed in hours, not months.
+        </p>
 
-function LeftPanel() {
-    return (
-        <div className="bg-[#0f0e17] relative flex flex-col justify-end p-10 overflow-hidden max-[560px]:hidden">
-
-            {/* floating orbs */}
-            <div className="absolute w-[320px] h-[320px] rounded-full bg-[#534AB7]/18 -top-16 -left-16 animate-float1" />
-            <div className="absolute w-[260px] h-[260px] rounded-full bg-[#1D9E75]/12 bottom-10 -right-20 animate-float2" />
-            <div className="absolute w-[180px] h-[180px] rounded-full bg-[#D4537E]/10 top-[40%] left-[30%] animate-float3" />
-
-            {/* subtle grid */}
-            <GridLines />
-
-            <div className="relative z-10">
-                <BrandLogo />
-
-                <p className="text-[28px] font-medium text-[#f0eefc] leading-[1.3] tracking-tight mb-3">
-                    Forecast smarter,<br />
-                    scale <span className="text-[#7F77DD]">faster</span>
-                </p>
-
-                <p className="text-[13px] text-[#f0eefc]/40 leading-relaxed max-w-[260px]">
-                    Real-time resource planning and capacity forecasting for high-growth teams.
-                </p>
-
-                <div className="flex gap-6 mt-8">
-                    {[['98%','Accuracy'],['3.2×','Faster planning'],['40+','Integrations']].map(([v,l]) => (
-                        <div key={l}>
-                            <div className="text-[18px] font-medium text-[#f0eefc]">{v}</div>
-                            <div className="text-[11px] text-[#f0eefc]/35 mt-0.5">{l}</div>
-                        </div>
-                    ))}
-                </div>
+        {/* feature list */}
+        <div className="flex flex-col gap-3 mb-8">
+          {features.map(({ icon: Icon, label, desc }) => (
+            <div key={label} className="flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(202,138,4,.1)', border: '1px solid rgba(202,138,4,.15)' }}>
+                <Icon size={13} style={{ color: '#ca8a04' }} />
+              </div>
+              <div>
+                <div className="text-[12px] font-semibold text-white">{label}</div>
+                <div className="text-[11px]" style={{ color: 'rgba(255,255,255,.3)' }}>{desc}</div>
+              </div>
             </div>
+          ))}
         </div>
-    )
-}
 
-export function LoginPage() {
-    const navigate = useNavigate()
-    const { setUser, setLoading, isLoading } = useAuthStore()
+        {/* stats */}
+        <div className="flex gap-6 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,.06)' }}>
+          {[['98%', 'Avg. accuracy'], ['3.2×', 'Faster planning'], ['40+', 'Integrations']].map(([v, l]) => (
+            <div key={l}>
+              <div className="text-[18px] font-bold" style={{ color: '#ca8a04' }}>{v}</div>
+              <div className="text-[10.5px] mt-0.5" style={{ color: 'rgba(255,255,255,.3)' }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-    const [email, setEmail]       = useState('')
-    const [password, setPassword] = useState('')
-    const [showPw, setShowPw]     = useState(false)
-    const [remember, setRemember] = useState(false)
+      {/* tenant tag */}
+      {tenant && (
+        <div className="relative z-10 mt-6">
+          <div className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,.25)' }}>
+            Workspace for <span style={{ color: 'rgba(255,255,255,.5)' }}>{tenant.name}</span>
+          </div>
+        </div>
+      )}
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
-        try {
-            await new Promise(r => setTimeout(r, 1000)) // replace with real API
-            setUser({ id: '1', email, name: 'Misbah Rahman' })
-            navigate({ to: '/dashboard' })
-        } finally {
-            setLoading(false)
+      <style>{`
+        @keyframes barPulse {
+          0%,100% { transform: scaleY(0.55); opacity:.55; }
+          50%      { transform: scaleY(1.0);  opacity:1;  }
         }
+      `}</style>
+    </div>
+  )
+}
+
+// ─── LoginPage ─────────────────────────────────────────────────────────────────
+export function LoginPage() {
+  const navigate = useNavigate()
+  const { setUser } = useAuthStore()
+  const tenant = getTenantFromUrl()
+  const { loginWithRedirect, user: ssoUser, isAuthenticated: ssoAuthenticated, isLoading: ssoLoading } = useAuth0()
+
+  const [stage,     setStage]     = useState<'credentials' | 'role'>('credentials')
+  const [email,     setEmail]     = useState('')
+  const [password,  setPassword]  = useState('')
+  const [showPw,    setShowPw]    = useState(false)
+  const [remember,  setRemember]  = useState(false)
+  const [role,      setRole]      = useState<Role | null>(null)
+  const [loading,   setLoading]   = useState(false)   // local — avoids persisted state bug
+
+  // When Auth0/Okta redirects back and the user is authenticated, advance to role selection
+  useEffect(() => {
+    if (ssoAuthenticated && ssoUser && stage === 'credentials') {
+      setEmail(ssoUser.email ?? ssoUser.name ?? '')
+      setStage('role')
     }
+  }, [ssoAuthenticated, ssoUser, stage])
 
-    return (
-        <div className="min-h-screen grid grid-cols-2 max-[560px]:grid-cols-1">
+  const inputCls = [
+    'w-full h-11 px-4 rounded-xl text-[13px] outline-none transition-all',
+    'bg-[#0d1525] border border-[#1e2d45] text-white placeholder:text-[#2d4060]',
+    'focus:border-[#ca8a04] focus:shadow-[0_0_0_3px_rgba(202,138,4,.1)]',
+  ].join(' ')
 
-            {/* ── left panel ── */}
-            <LeftPanel />
+  const handleCredentials = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) return
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 800))
+    setLoading(false)
+    setStage('role')
+  }
 
-            {/* ── right panel ── */}
-            <div className="bg-[#fafaf9] flex items-center justify-center px-8 py-10">
-                <div className="w-full max-w-[360px] animate-fadein">
+  const handleLogin = async () => {
+    if (!role) return
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 500))
+    const displayName = ssoUser?.name ?? ssoUser?.nickname ?? email
+    const nameParts = displayName.trim().split(/\s+/)
+    const initials = nameParts.length >= 2
+      ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+      : (displayName[0]?.toUpperCase() ?? '?')
+    setUser({
+      id: ssoUser?.sub ?? '1',
+      email: ssoUser?.email ?? email,
+      name: displayName,
+      picture: ssoUser?.picture,
+      role,
+      organisation: tenant?.name ?? 'HKS Inc.',
+      initials,
+    })
+    navigate({ to: '/dashboard' })
+    // setLoading(false) intentionally omitted — component unmounts on navigate
+  }
 
-                    <div className="mb-7">
-                        <h1 className="text-[22px] font-medium text-[#1a1a1a] tracking-tight mb-1.5">
-                            Sign in
-                        </h1>
-                        <p className="text-[13px] text-[#888]">Welcome back to your workspace</p>
-                    </div>
+  return (
+    <div className="min-h-screen grid max-[640px]:grid-cols-1" style={{ gridTemplateColumns: '1fr 1fr', background: '#06091a' }}>
+      <LeftPanel tenant={tenant} />
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* ── Right panel ── */}
+      <div className="flex items-center justify-center px-8 py-10 relative" style={{ background: '#080d18' }}>
+        {/* subtle top border */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(202,138,4,.3), transparent)' }} />
 
-                        <Field label="Email address">
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="you@company.com"
-                                autoComplete="email"
-                                className={inputCls}
-                            />
-                        </Field>
+        <div className="w-full max-w-[400px]">
 
-                        <Field
-                            label="Password"
-                            action={
-                                <button type="button" className="text-[12px] text-[#534AB7] hover:underline">
-                                    Forgot password?
-                                </button>
-                            }
-                        >
-                            <div className="relative">
-                                <input
-                                    type={showPw ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    autoComplete="current-password"
-                                    className={cn(inputCls, 'pr-10')}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPw(p => !p)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#bbb] hover:text-[#888]"
-                                >
-                                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-                        </Field>
-
-                        <label className="flex items-center gap-2 cursor-pointer -mt-1">
-                            <input
-                                type="checkbox"
-                                checked={remember}
-                                onChange={e => setRemember(e.target.checked)}
-                                className="w-[15px] h-[15px] accent-[#534AB7]"
-                            />
-                            <span className="text-[13px] text-[#666]">Keep me signed in for 30 days</span>
-                        </label>
-
-                        <button
-                            type="submit"
-                            disabled={!email || !password || isLoading}
-                            className={cn(
-                                'w-full h-11 rounded-[10px] text-[14px] font-medium tracking-wide',
-                                'bg-[#534AB7] text-white transition-opacity',
-                                'hover:opacity-90 active:scale-[.99]',
-                                'disabled:opacity-40 disabled:cursor-not-allowed',
-                                'flex items-center justify-center gap-2'
-                            )}
-                        >
-                            {isLoading ? <Spinner /> : 'Sign in'}
-                        </button>
-
-                    </form>
-
-                    <Divider />
-
-                    <GoogleButton />
-
-                    <p className="text-center text-[13px] text-[#888] mt-5">
-                        No account?{' '}
-                        <a href="/signup" className="text-[#534AB7] font-medium hover:underline">
-                            Create one free
-                        </a>
-                    </p>
-
-                </div>
+          {/* Tenant / platform badge */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
+              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)' }}>
+                <BarChart2 size={10} className="text-black" />
+              </div>
+              {tenant ? (
+                <>
+                  <span className="text-[12px] font-semibold text-white/70">{tenant.name}</span>
+                  <span className="text-[10px] text-white/25">·</span>
+                  <span className="text-[11px]" style={{ color: 'rgba(255,255,255,.3)' }}>Powered by Forecastory</span>
+                </>
+              ) : (
+                <span className="text-[12px] font-semibold text-white/50">Forecastory</span>
+              )}
             </div>
+          </div>
+
+          {/* ── Stage: Credentials ── */}
+          {stage === 'credentials' && (
+            <div style={{ animation: 'panelIn .3s ease' }}>
+              <div className="mb-7 text-center">
+                <h1 className="text-[24px] font-bold text-white tracking-tight mb-1.5">Sign in</h1>
+                <p className="text-[13px]" style={{ color: '#3d5570' }}>
+                  Enter your credentials to access your workspace
+                </p>
+              </div>
+
+              <form onSubmit={handleCredentials} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11.5px] font-semibold tracking-wide" style={{ color: '#6a89a8' }}>Work email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    autoComplete="email"
+                    className={inputCls}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11.5px] font-semibold tracking-wide" style={{ color: '#6a89a8' }}>Password</label>
+                    <button type="button" className="text-[11px] font-medium transition-colors hover:underline" style={{ color: '#ca8a04' }}>Forgot password?</button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className={cn(inputCls, 'pr-11')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(p => !p)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: '#2d4060' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#ca8a04')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#2d4060')}
+                    >
+                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div
+                    onClick={() => setRemember(r => !r)}
+                    className={cn('w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all cursor-pointer border', remember ? 'border-[#ca8a04]' : 'border-[#2a3a52]')}
+                    style={{ background: remember ? '#ca8a04' : 'transparent' }}
+                  >
+                    {remember && <Check size={9} className="text-black" strokeWidth={3} />}
+                  </div>
+                  <span className="text-[12px]" style={{ color: '#3d5570' }}>Keep me signed in for 30 days</span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={!email || !password || loading}
+                  className="w-full h-11 rounded-xl text-[13px] font-bold tracking-wide text-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-1"
+                  style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', boxShadow: loading || (!email || !password) ? 'none' : '0 4px 20px rgba(202,138,4,.35)' }}
+                >
+                  {loading ? (
+                    <div className="w-[18px] h-[18px] border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(0,0,0,.2)', borderTopColor: '#000' }} />
+                  ) : (
+                    <>Continue <ArrowRight size={15} /></>
+                  )}
+                </button>
+              </form>
+
+              {/* divider */}
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px" style={{ background: '#131c2e' }} />
+                <span className="text-[11px]" style={{ color: '#1e2d40' }}>or</span>
+                <div className="flex-1 h-px" style={{ background: '#131c2e' }} />
+              </div>
+
+              {/* SSO */}
+              <button
+                onClick={() => loginWithRedirect()}
+                disabled={ssoLoading}
+                className="w-full h-11 flex items-center justify-center gap-2.5 rounded-xl border text-[13px] transition-all text-white/60 hover:text-white hover:border-[#2a3a52] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: '#1a2536', background: '#0a0f1a' }}
+              >
+                {ssoLoading ? (
+                  <div className="w-[18px] h-[18px] border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(255,255,255,.1)', borderTopColor: 'rgba(255,255,255,.5)' }} />
+                ) : (
+                  'Continue with SSO'
+                )}
+              </button>
+
+              <p className="text-center text-[12px] mt-5" style={{ color: '#2d4060' }}>
+                Need access?{' '}
+                <a href="#" className="font-semibold hover:underline" style={{ color: '#ca8a04' }}>Contact your admin</a>
+              </p>
+            </div>
+          )}
+
+          {/* ── Stage: Role selection ── */}
+          {stage === 'role' && (
+            <div style={{ animation: 'panelIn .3s ease' }}>
+              <div className="mb-5">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4" style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.18)' }}>
+                  <Check size={13} className="text-emerald-400 flex-shrink-0" />
+                  <span className="text-[11.5px] font-medium text-emerald-400 truncate">Authenticated · {email}</span>
+                </div>
+                <h1 className="text-[22px] font-bold text-white tracking-tight mb-1">Select your role</h1>
+                <p className="text-[12.5px]" style={{ color: '#3d5570' }}>
+                  Choose how you'd like to access {tenant ? <><strong className="text-white/60">{tenant.name}</strong>'s workspace.</> : <>your workspace.</>}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 mb-5">
+                {ROLES.map(r => {
+                  const Icon = r.icon
+                  const selected = role === r.id
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setRole(r.id)}
+                      className="flex items-center gap-3.5 px-4 py-3 rounded-xl border text-left transition-all"
+                      style={{
+                        background: selected ? `${r.color}10` : '#090e1a',
+                        borderColor: selected ? r.color : '#192030',
+                        boxShadow: selected ? `0 0 0 1px ${r.color}30` : 'none',
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all" style={{ background: selected ? r.color : '#111926' }}>
+                        <Icon size={14} style={{ color: selected ? '#000' : '#3a5070' }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[12.5px] font-semibold text-white">{r.label}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-px rounded-full" style={{ background: `${r.color}1a`, color: r.color }}>{r.badge}</span>
+                        </div>
+                        <p className="text-[11px] leading-snug" style={{ color: '#3d5570' }}>{r.desc}</p>
+                      </div>
+                      <div
+                        className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{ borderColor: selected ? r.color : '#1e2d40', background: selected ? r.color : 'transparent' }}
+                      >
+                        {selected && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => { setStage('credentials'); setRole(null) }}
+                  className="h-11 px-5 rounded-xl border text-[13px] font-semibold transition-all hover:border-[#2a3a52]"
+                  style={{ borderColor: '#192030', color: '#5a7a98', background: 'transparent' }}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleLogin}
+                  disabled={!role || loading}
+                  className="flex-1 h-11 rounded-xl text-[13px] font-bold text-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg,#ca8a04,#a16207)', boxShadow: role && !loading ? '0 4px 20px rgba(202,138,4,.35)' : 'none' }}
+                >
+                  {loading ? (
+                    <div className="w-[18px] h-[18px] border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(0,0,0,.2)', borderTopColor: '#000' }} />
+                  ) : (
+                    <>Enter workspace <ArrowRight size={15} /></>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-    )
+      </div>
+
+      <style>{`
+        @keyframes panelIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0);    }
+        }
+      `}</style>
+    </div>
+  )
 }

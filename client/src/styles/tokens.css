@@ -1,75 +1,98 @@
-/* src/styles/tokens.css */
+/* src/styles/tokens.css
+   ═══════════════════════════════════════════════════════
+   COLOR SCHEME: White · Black · Gray · Yellow
+   ═══════════════════════════════════════════════════════
+   To change the entire color scheme, only edit the
+   "accent" block below (--a1 through --a4).
+   Everything else uses semantic tokens that auto-adapt.
+   ═══════════════════════════════════════════════════════ */
+
 @import "tailwindcss";
 
 @layer base {
-    :root {
-        /* brand colours */
-        --color-primary:        210 100% 40%;   /* hsl values — tailwind reads these */
-        --color-primary-hover:  210 100% 35%;
-        --color-secondary:      260 60% 55%;
-        --color-accent:         170 70% 40%;
+  :root {
+    /* ── Surfaces (white → light gray scale) ── */
+    --s0: #f5f5f5;   /* page bg        */
+    --s1: #ffffff;   /* cards/sidebar  */
+    --s2: #f0f0f0;   /* subtle bg      */
+    --s3: #e8e8e8;   /* hover/pressed  */
+    --s4: #d4d4d4;   /* border normal  */
+    --s5: #b8b8b8;   /* border strong  */
 
-        /* neutral surface */
-        --color-background:     0 0% 100%;
-        --color-surface:        220 14% 97%;
-        --color-surface-raised: 0 0% 100%;
-        --color-border:         220 13% 91%;
-        --color-border-strong:  220 13% 80%;
+    /* ── Text (black → gray scale) ── */
+    --t1: #0a0a0a;   /* primary black  */
+    --t2: #3a3a3a;   /* secondary      */
+    --t3: #737373;   /* muted          */
+    --t4: #a8a8a8;   /* placeholder    */
 
-        /* text */
-        --color-text-primary:   222 47% 11%;
-        --color-text-secondary: 215 16% 47%;
-        --color-text-muted:     215 16% 65%;
-        --color-text-inverse:   0 0% 100%;
+    /* ═══════════════════════════════════════════
+       ACCENT — Yellow (change just these 4 to
+       switch the entire scheme instantly)
+       ─────────────────────────────────────────
+       Examples:
+         Blue:   #2563eb / #1d4ed8 / #dbeafe / #93c5fd
+         Slate:  #475569 / #334155 / #e2e8f0 / #94a3b8
+         Yellow: #ca8a04 / #a16207 / #fefce8 / #fde047
+    ═══════════════════════════════════════════ */
+    --a1: #ca8a04;   /* accent main    */
+    --a2: #a16207;   /* accent hover   */
+    --a3: #fefce8;   /* accent tint    */
+    --a4: #fde047;   /* accent border  */
 
-        /* semantic */
-        --color-success:        142 72% 29%;
-        --color-warning:        38 92% 50%;
-        --color-danger:         0 84% 60%;
-        --color-info:           210 100% 40%;
+    /* ── Semantic ── */
+    --er: #dc2626;  --er-t: #fef2f2;  --er-b: #fca5a5;
+    --wa: #d97706;  --wa-t: #fffbeb;  --wa-b: #fcd34d;
+    --in: #2563eb;  --in-t: #eff6ff;  --in-b: #93c5fd;
+    --ok: #16a34a;  --ok-t: #f0fdf4;  --ok-b: #86efac;
 
-        /* spacing scale */
-        --spacing-xs:  4px;
-        --spacing-sm:  8px;
-        --spacing-md:  12px;
-        --spacing-lg:  16px;
-        --spacing-xl:  24px;
-        --spacing-2xl: 32px;
-        --spacing-3xl: 48px;
+    /* ── Depth shadows ── */
+    --d1: 0 1px 2px rgba(0,0,0,.06),  0 1px 3px rgba(0,0,0,.08);
+    --d2: 0 2px 6px rgba(0,0,0,.08),  0 4px 12px rgba(0,0,0,.10);
+    --d3: 0 4px 12px rgba(0,0,0,.10), 0 8px 24px rgba(0,0,0,.12);
+    --d4: 0 8px 24px rgba(0,0,0,.12), 0 16px 48px rgba(0,0,0,.16);
+    --di: inset 0 1px 2px rgba(0,0,0,.06);
 
-        /* radii */
-        --radius-sm:  6px;
-        --radius-md:  8px;
-        --radius-lg:  12px;
-        --radius-xl:  16px;
-        --radius-full: 9999px;
+    /* ── Radii ── */
+    --r:   6px;
+    --rl:  10px;
+    --rxl: 14px;
 
-        /* typography */
-        --font-sans:  'Inter', system-ui, sans-serif;
-        --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
-        --font-size-xs:   12px;
-        --font-size-sm:   13px;
-        --font-size-base: 14px;
-        --font-size-md:   15px;
-        --font-size-lg:   18px;
-        --font-size-xl:   22px;
-        --font-size-2xl:  28px;
+    /* ── Fonts ── */
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
 
-        /* shadows */
-        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
-        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
-    }
+  /* ═══════════════════════════════════════════
+     DARK MODE — same accent, darker surfaces
+  ═══════════════════════════════════════════ */
+  [data-theme="dark"] {
+    --s0: #111111;
+    --s1: #1a1a1a;
+    --s2: #222222;
+    --s3: #2a2a2a;
+    --s4: #333333;
+    --s5: #444444;
 
-    /* dark mode — just override the tokens, every component updates automatically */
-    .dark {
-        --color-background:     222 47% 8%;
-        --color-surface:        222 47% 11%;
-        --color-surface-raised: 222 47% 14%;
-        --color-border:         222 47% 18%;
-        --color-border-strong:  222 47% 25%;
-        --color-text-primary:   210 40% 96%;
-        --color-text-secondary: 215 20% 65%;
-        --color-text-muted:     215 16% 45%;
-    }
+    --t1: #f0f0f0;
+    --t2: #c0c0c0;
+    --t3: #909090;
+    --t4: #686868;
+
+    /* accent stays yellow in dark too */
+    --a1: #eab308;
+    --a2: #ca8a04;
+    --a3: #1c1a00;
+    --a4: #3d3200;
+
+    --er: #f87171;  --er-t: #1c0a0a;  --er-b: #7f1d1d;
+    --wa: #fbbf24;  --wa-t: #1c1400;  --wa-b: #78350f;
+    --in: #60a5fa;  --in-t: #0a1628;  --in-b: #1e3a5f;
+    --ok: #4ade80;  --ok-t: #0a1c0e;  --ok-b: #14532d;
+
+    --d1: 0 1px 2px rgba(0,0,0,.3),  0 1px 3px rgba(0,0,0,.4);
+    --d2: 0 2px 6px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.4);
+    --d3: 0 4px 12px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);
+    --d4: 0 8px 24px rgba(0,0,0,.45),0 16px 48px rgba(0,0,0,.5);
+    --di: inset 0 1px 2px rgba(0,0,0,.3);
+  }
 }

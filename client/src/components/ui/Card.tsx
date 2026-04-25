@@ -1,5 +1,5 @@
 // src/components/ui/Card.tsx
-import {cn} from "../../utils/cn.ts";
+import {cn} from "../../utils/cn";
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (

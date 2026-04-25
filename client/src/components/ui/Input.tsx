@@ -1,6 +1,6 @@
 import { forwardRef, useState } from 'react'
 import {EyeIcon, EyeOffIcon} from "lucide-react";
-import {cn} from "../../utils/cn.ts";
+import {cn} from "../../utils/cn";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string
