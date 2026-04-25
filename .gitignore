@@ -3,3 +3,10 @@
 client/node_modules/
 client/dist/
 **/.DS_Store
+**/__pycache__/
+*.pyc
+*.pyo
+ai/.venv/
+ai/venv/
+ai/db.sqlite3
+ai/.env
